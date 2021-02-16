@@ -1,37 +1,48 @@
 # -*- coding: utf-8 -*-
 import glob
+import time
+import os
 from timeit import default_timer as timer
+from multiprocessing import Pool, cpu_count
 
 
-class CalculationResult:
-    def __init__(self):
-        self.file_num = 0
-        self.line_num = 0
+def cal_line_of_code(file):
+    count = 0
 
-    def increase_file_num(self):
-        self.file_num += 1
-
-    def increase_line_num(self):
-        self.line_num += 1
-
-
-def calculate(pathname, result_):
-    start = timer()
-    for file in glob.iglob(pathname, recursive=True):
-        result_.increase_file_num()
+    if os.path.isfile(file):
         with open(file, "r", errors="ignore") as fp:
             lines = fp.readlines()
             for line in lines:
                 if line.strip() != "":
-                    result_.increase_line_num()
+                    count += 1
 
-    end = timer()
-    print(f"num_of_file:{result_.file_num}, num_of_line:{result_.line_num}")
-    print(f'calculate {pathname} - elapsed time: {end - start}')
+    return count
+
+
+def calculate(pathname_):
+    files = glob.iglob(pathname_, recursive=True)
+    ret_, cnt = [], 0
+    num_of_process = cpu_count()
+    with Pool(num_of_process) as pool:
+        ret_ = pool.map(cal_line_of_code, files)
+
+    for n in ret_:
+        cnt += n
+
+    return len(ret_), cnt
 
 
 if __name__ == '__main__':
-    path_name = "/Users/admin/linux-5.11/**/*.c"
-    result = CalculationResult()
-    calculate(path_name, result)
+    print(f"main process:{os.getpid()}, cpu_count:{cpu_count()}")
 
+    pathname = ["/Users/admin/Downloads/linux-5.11/**/*",
+                "/Users/admin/Downloads/Python-3.9.1/**/*",
+                "/Users/admin/Downloads/tensorflow-master/**/*",
+                "/Users/admin/Downloads/pytorch-master/**/*"
+                ]
+
+    for pn in pathname:
+        start = timer()
+        num_of_file, num_of_line = calculate(pn)
+        end = timer()
+        print(f"elapsed time:{round(end - start, 2)}s, num_of_file:{num_of_file}, num_of_line:{num_of_line} for {pn}")
