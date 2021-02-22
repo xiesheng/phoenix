@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime
-from elasticsearch import Elasticsearch, NotFoundError
+from elasticsearch import Elasticsearch, NotFoundError, ConnectionTimeout
 from timeit import default_timer as timer
 from multiprocessing import Pool, cpu_count
 import uuid
@@ -24,9 +24,14 @@ def create_doc(num_of_doc):
             "timestamp": datetime.now(),
             "data": data
         }
-        res = es.index(index="chatbot01", body=doc)
-        if res['result'] == "created":
-            created_cnt += 1
+        try:
+            res = es.index(index="chatbot01", body=doc)
+            if res['result'] == "created":
+                created_cnt += 1
+        except ConnectionTimeout as err:
+            print(f"{os.getpid()}:", err)
+        finally:
+            continue
 
     return created_cnt
 
